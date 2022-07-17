@@ -1,0 +1,27 @@
+---
+name: "static-code-analysis"
+
+on:
+  pull_request: {}
+
+jobs:
+  static-code-analysis:
+    runs-on: "ubuntu-20.04"
+    steps:
+    - uses: "actions/checkout@v2"
+    - name: "install dependencies"
+      run: |
+        sudo -E eatmydata -- bash -c '
+          set -eo pipefail
+
+          shellcheck_version=v0.8.0
+          shfmt_version=v3.5.1
+
+          curl -sSLf https://github.com/mvdan/sh/releases/download/${shfmt_version}/shfmt_${shfmt_version}_linux_amd64 >/usr/local/bin/shfmt
+          curl -sSLf https://github.com/koalaman/shellcheck/releases/download/${shellcheck_version}/shellcheck-${shellcheck_version}.linux.x86_64.tar.xz | tar -Jx shellcheck-${shellcheck_version}/shellcheck --to-stdout >/usr/local/bin/shellcheck
+          chmod 0755 /usr/local/bin/*
+        '
+    - name: "run static code analysis"
+      run: |
+        find . -name '*.sh' | grep -vFf ./.shellcheck_exclusions 2>/dev/null | xargs shellcheck --format=gcc --enable=all --exclude=SC1090,SC1091,SC2250,SC3043
+        find . -name '*.sh' | grep -vFf ./.shellcheck_exclusions 2>/dev/null | xargs shfmt -d -i 2 -bn -ci
